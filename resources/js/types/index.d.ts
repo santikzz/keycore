@@ -78,3 +78,15 @@ export interface License {
     time_left: number;
     is_expired?: boolean;
 }
+
+export interface File {
+    id: number;
+    product_id: number | null;
+    custom_name: string;
+    file_name: string;
+    file_path: string;
+    is_hidden: boolean;
+    is_downloadable: boolean;
+    created_at: string;
+    updated_at: string;
+}
