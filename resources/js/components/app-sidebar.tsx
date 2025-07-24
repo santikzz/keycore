@@ -4,7 +4,7 @@ import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { BookOpen, BoxIcon, Folder, KeyIcon, LayoutGrid } from 'lucide-react';
+import { BoxIcon, Files, KeyIcon, LayoutGrid } from 'lucide-react';
 import AppLogo from './app-logo';
 
 const mainNavItems: NavItem[] = [
@@ -22,7 +22,12 @@ const mainNavItems: NavItem[] = [
         title: 'Licenses',
         href: route('licenses.index'),
         icon: KeyIcon
-    }
+    },
+    {
+        title: 'Files',
+        href: route('files.index'),
+        icon: Files
+    },
 ];
 
 // const footerNavItems: NavItem[] = [

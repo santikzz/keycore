@@ -1,24 +1,24 @@
+import { FileTableDef } from "@/components/files/file-table-def";
 import { MainLayout } from "@/components/main-layout";
-import { ProductTableDef } from "@/components/products/product-table-def";
-import { BreadcrumbItem, Product } from "@/types";
+import { BreadcrumbItem, File } from "@/types";
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Products',
-        href: route('products.index'),
+        title: 'Files',
+        href: route('files.index'),
     },
 ];
 
-interface ProductsPageProps {
-    products: Product[];
+interface FilesPageProps {
+    files: File[];
 }
 
-export default function ProductsPage({ products }: ProductsPageProps) {
+export default function FilesPage({ files }: FilesPageProps) {
 
     return (
         <MainLayout title="Files" breadcrumbs={breadcrumbs}>
 
-            <ProductTableDef data={products}/>
+            <FileTableDef data={files}/>
 
         </MainLayout>
     )

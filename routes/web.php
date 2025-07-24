@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\FileController;
 use App\Http\Controllers\LicenseController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\WebController;
@@ -25,6 +26,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('licenses', [LicenseController::class, 'create'])->name('licenses.create');
     Route::put('licenses/{license}', [LicenseController::class, 'update'])->name('licenses.update');
     Route::delete('licenses/{license}', [LicenseController::class, 'delete'])->name('licenses.delete');
+
+    Route::get('files', [FileController::class, 'index'])->name('files.index');
+    Route::post('files', [FileController::class, 'upload'])->name('files.upload');
+    Route::put('files/{file}', [FileController::class, 'update'])->name('files.update');
+    Route::delete('files/{file}', [FileController::class, 'delete'])->name('files.delete');
 
     /*
         ================== JSON API ROUTES ==================

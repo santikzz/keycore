@@ -60,6 +60,23 @@ export const FileTableDef = ({ data = [] }: FileTableDefProps) => {
             ),
         },
         {
+            accessorKey: "product_name",
+            header: ({ column }) => {
+                return (
+                    <Button
+                        variant="ghost"
+                        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+                    >
+                        Product
+                        <ArrowUpDown />
+                    </Button>
+                )
+            },
+            cell: ({ row }) => (
+                <span>{row.original?.product?.name}</span>
+            ),
+        },
+        {
             accessorKey: "file_name",
             header: ({ column }) => {
                 return (

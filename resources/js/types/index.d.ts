@@ -89,4 +89,6 @@ export interface File {
     is_downloadable: boolean;
     created_at: string;
     updated_at: string;
+
+    product?: Product;
 }
