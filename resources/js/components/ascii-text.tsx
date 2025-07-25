@@ -619,7 +619,7 @@ export default function ASCIIText({
     return (
         <div
             ref={containerRef}
-            className="ascii-text-container absolute inset-0 -translate-y-[12rem] overflow-hidden"
+            className="ascii-text-container absolute inset-0 -translate-y-[12rem] translate-x-[25%] overflow-hidden"
             // style={{
             //     position: "absolute",
             //     width: "100%",
