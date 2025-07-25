@@ -2,15 +2,15 @@
 
 namespace App\Enums;
 
-enum Codes: string
+class Codes
 {
 
-    case TOO_MANY_REQUESTS = 'too_many_requests';
-    case SSL_ERROR = 'ssl_error';
-    case INVALID = 'invalid';
-    case UNUSED = 'unused';
-    case ACTIVE = 'active';
-    case EXPIRED = 'expired';
-    case HWID_MISMATCH = 'hwid_mismatch';
+    public const TOO_MANY_REQUESTS = 'too_many_requests';
+    public const SSL_ERROR = 'ssl_error';
+    public const INVALID = 'invalid';
+    public const UNUSED = 'unused';
+    public const ACTIVE = 'active';
+    public const EXPIRED = 'expired';
+    public const HWID_MISMATCH = 'hwid_mismatch';
 
 }

@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
+use Carbon\CarbonInterval;
 use Illuminate\Database\Eloquent\Model;
 
 class License extends Model
@@ -24,11 +26,6 @@ class License extends Model
         'paused_at' => 'datetime',
     ];
 
-    protected $appends = [
-        'time_left',
-        'is_expired',
-    ];
-
     /*
         ============= MODEL RELATIONS =============
     */
@@ -44,28 +41,28 @@ class License extends Model
     }
 
     /*
-        ============= MODEL ATTRIBUTES =============
+        ============= MODEL METHODS =============
     */
 
-    public function getTimeLeftAttribute()
+    public function timeLeft()
     {
-        if ($this->activated_at === null || $this->isExpired()) {
-            return 0;
-        }
-
-        if ($this->is_lifetime) {
-            return 1;
-        }
-
-        $expiresAt = $this->activated_at->addSeconds($this->duration);
-        $remainingSeconds = $expiresAt->diffInSeconds(now());
-
-        return $remainingSeconds > 0 ? $remainingSeconds : 0;
+        $now = Carbon::now();
+        $diff = Carbon::parse($this->activated_at)->diffInSeconds($now);
+        $floor = floor($diff);
+        return $floor > 0 ? $floor : 0;
     }
 
-    public function getIsExpiredAttribute()
+    public function timeLeftHuman()
     {
-        return $this->status === 'expired';
+        $timeLeft = $this->timeLeft();
+
+        if ($timeLeft <= 0) {
+            return '0 seconds';
+        }
+
+        return CarbonInterval::seconds($timeLeft)
+            ->cascade()
+            ->forHumans(['short' => true]);
     }
 
     /*

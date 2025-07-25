@@ -8,6 +8,7 @@ use App\Models\Product;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Inertia\Inertia;
 
@@ -38,19 +39,19 @@ class LicenseController extends Controller
 
         // ssl check
         if (!$request->secure() && !app()->environment('local')) {
-            return response()->json(['error' => 'ssl_error'], 400);
+            return response()->json(['error' => 'ssl_error'], 200);
         }
 
         $request->validate([
             'key' => 'required|string|min:5|max:100',
             'hwid' => 'required|string|min:5|max:200',
             'product_code' => 'required|string|max:50',
-            'format' => 'nullable|string|in:json,plain,csv'
+            'format' => 'sometimes|string|in:json,plain,csv'
         ]);
 
         // if is invalid request, return error
         if (!$request->has('key') || !$request->has('hwid') || !$request->has('product_code')) {
-            return response()->json(['error' => Codes::INVALID], 400);
+            return response()->json(['error' => Codes::INVALID], 200);
         }
 
         $licenseKey = $request->input('key');
@@ -67,7 +68,7 @@ class LicenseController extends Controller
             ->first();
 
         if (!$license) {
-            return response()->json(['error' => Codes::INVALID], 404);
+            return response()->json(['error' => Codes::INVALID], 200);
         }
 
         $result = $this->processLicense($license, $hwid);
@@ -115,13 +116,17 @@ class LicenseController extends Controller
             return $this->buildResponse($license, Codes::ACTIVE);
         }
 
+        Log::debug('License status is invalid', [
+            'license_id' => $license->id,
+            'status' => $license->status,
+        ]);
         return ['error' => Codes::INVALID];
     }
 
     private function buildResponse(License $license, string $status)
     {
-        $timeLeft = $license->is_lifetime ? 1 : $license->time_left;
-        $humanTimeLeft = Carbon::now()->addSeconds($timeLeft)->diffForHumans();
+        $timeLeft = $license->is_lifetime ? 1 : $license->timeLeft();
+        $humanTimeLeft = $license->timeLeftHuman();
 
         return [
             'status' => $status,

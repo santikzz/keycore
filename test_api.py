@@ -1,4 +1,5 @@
 import requests
+import json
 
 def test_license_activation():
    
@@ -10,10 +11,12 @@ def test_license_activation():
 
     response = requests.post('http://localhost:8000/api/license/check', body)
 
-    print("=============================================")
-    print(f"Response Status Code: {response.status_code}")
-    print(f"Response JSON: {response.text}")
-    print("=============================================")
+    try:
+        json_data = response.json()
+        print(json.dumps(json_data, indent=4))
+    except json.JSONDecodeError:
+        print("Response is not valid JSON:")
+        print(response.text)
 
 
 if __name__ == "__main__":
