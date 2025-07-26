@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage, } from "@/components/ui/form"
-import { CalendarIcon, CheckIcon, ClockIcon, ClockPlusIcon, CpuIcon, KeyIcon, PauseIcon, RotateCcwIcon, TrashIcon } from "lucide-react"
+import { CalendarIcon, CheckIcon, ClockIcon, ClockPlusIcon, CpuIcon, KeyIcon, Loader2, PauseIcon, PlayIcon, RotateCcwIcon, TrashIcon } from "lucide-react"
 import { ButtonLoader } from "../custom/button-loader"
 import { router } from "@inertiajs/react"
 import { useEffect, useState } from "react"
@@ -16,12 +16,15 @@ import { humanToSeconds } from "@/lib/utils"
 import { Label } from "../ui/label"
 import { Separator } from "../ui/separator"
 import { LicenseStatusBadge } from "./license-status-badge"
+import { useLicense } from "@/hooks/api/use-licenses"
 
-const formSchema = z.object({
-    product_id: z.number().min(1, "Product is required"),
-    duration_unit: z.string().min(1, "Duration is required"),
+const addTimeSchema = z.object({
+    duration_unit: z.string().min(1, "Duration unit is required"),
     duration_value: z.number().min(1, "Duration value is required"),
-    amount: z.number().min(1, "Amount is required"),
+});
+
+const updateSchema = z.object({
+    status: z.string().min(1, "Status is required"),
     description: z.string().optional(),
 });
 
@@ -37,48 +40,122 @@ export const LicenseEditDialog = ({
     license
 }: LicenseEditDialogProps) => {
 
-    const [pending, setPending] = useState(false);
-    const [submitAction, setSubmitAction] = useState<'create' | 'export'>('create');
+    const [pendingResetHwid, setPendingResetHwid] = useState(false);
+    const [pendingPause, setPendingPause] = useState(false);
+    const [pendingUpdate, setPendingUpdate] = useState(false);
+    const [pendingDelete, setPendingDelete] = useState(false);
+    const [pendingAddTime, setPendingAddTime] = useState(false);
+    const [previewTimeLeft, setPreviewTimeLeft] = useState<number | null>(null);
 
-    const form = useForm<z.infer<typeof formSchema>>({
-        resolver: zodResolver(formSchema)
+    const { data, isPending } = useLicense({ licenseId: license.id, enabled: open });
+
+    const addTimeForm = useForm<z.infer<typeof addTimeSchema>>({
+        resolver: zodResolver(addTimeSchema),
+        defaultValues: {
+            duration_unit: "hours",
+            duration_value: 1,
+        }
     });
 
-    function onSubmit(values: z.infer<typeof formSchema>) {
-        setPending(true);
-
-        const _values = {
-            ...values,
-            duration: humanToSeconds(values.duration_unit, values.duration_value),
-            is_lifetime: values.duration_unit === 'lifetime',
-            is_export: submitAction === 'export'
-        };
-
-        try {
-            router.post(route('licenses.create'), _values, {
-                onSuccess: () => {
-                    onOpenChange(false);
-                },
-                onFinish: () => {
-                    setPending(false);
-                }
-            })
-        } catch (error) {
-            console.error("Form submission error", error);
+    const updateForm = useForm<z.infer<typeof updateSchema>>({
+        resolver: zodResolver(updateSchema),
+        defaultValues: {
+            status: data?.status || "active",
+            description: data?.description || "",
         }
+    });
+
+    // Update form when data changes
+    useEffect(() => {
+        if (data) {
+            updateForm.reset({
+                status: data.status,
+                description: data.description || "",
+            });
+        }
+    }, [data, updateForm]);
+
+    // Calculate preview time when form values change
+    useEffect(() => {
+        const subscription = addTimeForm.watch((values) => {
+            if (values.duration_unit && values.duration_value && data?.time_left) {
+                const additionalSeconds = humanToSeconds(values.duration_unit, values.duration_value);
+                setPreviewTimeLeft(data.time_left + additionalSeconds);
+            } else {
+                setPreviewTimeLeft(null);
+            }
+        });
+        return () => subscription.unsubscribe();
+    }, [addTimeForm, data]);
+
+    const isPaused = data?.paused_at !== null;
+    const allowPause = data && (data.status === 'active');
+    const allowResetHwid = data && (data.hwid !== null);
+
+    function onAddTime(values: z.infer<typeof addTimeSchema>) {
+        if (!data) return;
+        setPendingAddTime(true);
+        
+        const additionalSeconds = humanToSeconds(values.duration_unit, values.duration_value);
+        
+        router.post(route('licenses.add-time', { license: data.id }), {
+            seconds: additionalSeconds
+        }, {
+            onSuccess: () => {
+                addTimeForm.reset();
+                setPreviewTimeLeft(null);
+            },
+            onFinish: () => setPendingAddTime(false),
+        });
     }
 
-    // useEffect(() => {
-    //     if (license) {
-    //         form.reset({
-    //             product_id: license.product_id,
-    //             duration_unit: license.duration_unit,
-    //             duration_value: license.duration_value,
-    //             amount: license.amount,
-    //             description: license.description || ''
-    //         });
-    //     }
-    // }, [license, form]);
+    function onUpdate(values: z.infer<typeof updateSchema>) {
+        if (!data) return;
+        setPendingUpdate(true);
+        
+        router.put(route('licenses.update', { license: data.id }), values, {
+            onSuccess: () => {
+            //    onOpenChange(false);
+            },
+            onFinish: () => setPendingUpdate(false),
+        });
+    }
+
+    const handleResetHwid = () => {
+        if (!data) return;
+        setPendingResetHwid(true);
+        router.post(route('licenses.reset-hwid', { license: data.id }), {}, {
+            onSuccess: () => {
+                // onOpenChange(false);
+            },
+            onFinish: () => setPendingResetHwid(false),
+        });
+    };
+
+    const handlePause = () => {
+        if (!data) return;
+        setPendingPause(true);
+        
+        const routeName = isPaused ? 'licenses.unpause' : 'licenses.pause';
+        
+        router.post(route(routeName, { license: data.id }), {}, {
+            onSuccess: () => {
+                // onOpenChange(false);
+            },
+            onFinish: () => setPendingPause(false),
+        });
+    };
+
+    const handleDelete = () => {
+        if (!data) return;
+        setPendingDelete(true);
+        router.delete(route('licenses.delete', { license: data.id }), {
+            onSuccess: () => {
+                onOpenChange(false);
+            },
+            onFinish: () => setPendingDelete(false),
+        });
+    };
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -89,96 +166,155 @@ export const LicenseEditDialog = ({
                     <DialogDescription></DialogDescription>
                 </DialogHeader>
 
-                {/* LICENSE KEY */}
-                <div className="flex flex-col gap-2">
-                    <Label>License Key</Label>
-                    <div className="relative">
-                        <Input className="peer ps-9 pe-12" readOnly value={license.license_key} />
-                        <div className="text-muted-foreground/80 pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-3 peer-disabled:opacity-50">
-                            <KeyIcon className="size-4" />
-                        </div>
-                        <span className="text-muted-foreground pointer-events-none absolute inset-y-0 end-0 flex items-center justify-center pe-2 text-sm peer-disabled:opacity-50">
-                            <LicenseStatusBadge>active</LicenseStatusBadge>
-                        </span>
-                    </div>
-                </div>
+                {isPending ? (
 
-                {/* HWID */}
-                <div className="flex flex-col gap-2">
-                    <Label>Hardware ID</Label>
-                    <div className="flex gap-2">
-                        <div className="relative w-full">
-                            <Input className="peer ps-9" readOnly value='A1B2C3D4-E5F6-7890-ABCD-EF1234567890' />
+                    <div className="h-full flex items-center justify-center">
+                        <Loader2 className="size-12 animate-spin text-primary" />
+                    </div>
+                ) : (<>
+
+                    {/* LICENSE KEY */}
+                    <div className="flex flex-col gap-2">
+                        <Label>License Key</Label>
+                        <div className="relative">
+                            <Input className="peer ps-9 pe-12" readOnly value={data?.license_key || ""} />
                             <div className="text-muted-foreground/80 pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-3 peer-disabled:opacity-50">
-                                <CpuIcon className="size-4" />
+                                <KeyIcon className="size-4" />
                             </div>
+                            <span className="text-muted-foreground pointer-events-none absolute inset-y-0 end-0 flex items-center justify-center pe-2 text-sm peer-disabled:opacity-50">
+                                <LicenseStatusBadge status={data?.status || "unknown"}/>
+                            </span>
                         </div>
-                        <Button>
-                            Reset
-                            <RotateCcwIcon className="size-4" />
-                        </Button>
                     </div>
-                </div>
 
-                <Separator className="my-2" />
+                    {/* HWID */}
+                    <div className="flex flex-col gap-2">
+                        <Label>Hardware ID</Label>
+                        <div className="flex gap-2">
+                            <div className="relative w-full">
+                                <Input className="peer ps-9" readOnly value={data?.hwid || "Not assigned"} />
+                                <div className="text-muted-foreground/80 pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-3 peer-disabled:opacity-50">
+                                    <CpuIcon className="size-4" />
+                                </div>
+                            </div>
+                            <ButtonLoader
+                                onClick={handleResetHwid}
+                                loading={pendingResetHwid}
+                                icon={RotateCcwIcon}
+                                disabled={!allowResetHwid}
+                            >
+                                Reset
+                            </ButtonLoader>
+                        </div>
+                    </div>
 
+                    <Separator className="my-2" />
 
+                    <Form {...addTimeForm}>
+                        <form onSubmit={addTimeForm.handleSubmit(onAddTime)} className="space-y-4">
+                            <div className="flex gap-4 items-end">
 
-
-                <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                        <div className="flex gap-4 items-end">
-
-                            <FormField
-                                control={form.control}
-                                name="duration_value"
-                                render={({ field }) => (
-                                    <FormItem className="flex-1">
-                                        <FormLabel>Duration Amount</FormLabel>
-                                        <FormControl>
-                                            <div className="flex rounded-md shadow-xs">
-                                                <span className="border-input bg-background text-muted-foreground -z-10 inline-flex items-center rounded-s-md border px-3 text-sm">
-                                                    <ClockIcon className="size-4" />
-                                                </span>
-                                                <Input
-                                                    {...field}
-                                                    min={1}
-                                                    type="number"
-                                                    className="-ms-px rounded-s-none shadow-none"
-                                                    onChange={(e) => field.onChange(parseInt(e.target.value))}
-                                                />
-                                            </div>
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-
-                            <FormField
-                                control={form.control}
-                                name="duration_unit"
-                                render={({ field }) => (
-                                    <FormItem className="flex-1">
-                                        <FormLabel>Duration Unit</FormLabel>
-
-                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormField
+                                    control={addTimeForm.control}
+                                    name="duration_value"
+                                    render={({ field }) => (
+                                        <FormItem className="flex-1">
+                                            <FormLabel>Duration Amount</FormLabel>
                                             <FormControl>
                                                 <div className="flex rounded-md shadow-xs">
                                                     <span className="border-input bg-background text-muted-foreground -z-10 inline-flex items-center rounded-s-md border px-3 text-sm">
-                                                        <CalendarIcon className="size-4" />
+                                                        <ClockIcon className="size-4" />
                                                     </span>
-                                                    <SelectTrigger className="-ms-px rounded-s-none shadow-none">
-                                                        <SelectValue placeholder="Select" />
-                                                    </SelectTrigger>
+                                                    <Input
+                                                        {...field}
+                                                        min={1}
+                                                        type="number"
+                                                        className="-ms-px rounded-s-none shadow-none"
+                                                        onChange={(e) => field.onChange(parseInt(e.target.value))}
+                                                    />
                                                 </div>
                                             </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={addTimeForm.control}
+                                    name="duration_unit"
+                                    render={({ field }) => (
+                                        <FormItem className="flex-1">
+                                            <FormLabel>Duration Unit</FormLabel>
+
+                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                <FormControl>
+                                                    <div className="flex rounded-md shadow-xs">
+                                                        <span className="border-input bg-background text-muted-foreground -z-10 inline-flex items-center rounded-s-md border px-3 text-sm">
+                                                            <CalendarIcon className="size-4" />
+                                                        </span>
+                                                        <SelectTrigger className="-ms-px rounded-s-none shadow-none">
+                                                            <SelectValue placeholder="Select" />
+                                                        </SelectTrigger>
+                                                    </div>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    <SelectItem value="hours">Hours</SelectItem>
+                                                    <SelectItem value="days">Days</SelectItem>
+                                                    <SelectItem value="weeks">Weeks</SelectItem>
+                                                    <SelectItem value="months">Months</SelectItem>
+                                                    <SelectItem value="years">Years</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <ButtonLoader
+                                    type="submit"
+                                    loading={pendingAddTime}
+                                    icon={ClockPlusIcon}
+                                >
+                                    Add Time
+                                </ButtonLoader>
+
+                            </div>
+                        </form>
+                    </Form>
+
+                    <div className="rounded-md p-4 flex gap-2 items-center justify-center bg-secondary">
+                        <ClockIcon />
+                        <Label className="text-xl">
+                            Time Left: <span className="font-bold">{data?.time_left_human || "Unknown"}</span>
+                            {previewTimeLeft && (
+                                <span className="text-green-600 ml-2">
+                                    → Preview: {Math.floor(previewTimeLeft / 86400)}d {Math.floor((previewTimeLeft % 86400) / 3600)}h
+                                </span>
+                            )}
+                        </Label>
+                    </div>
+
+                    <Separator className="my-2" />
+
+                    {/* UPDATE FORM */}
+                    <Form {...updateForm}>
+                        <form onSubmit={updateForm.handleSubmit(onUpdate)} className="space-y-4">
+                            
+                            <FormField
+                                control={updateForm.control}
+                                name="status"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Change Status</FormLabel>
+                                        <Select onValueChange={field.onChange} value={field.value}>
+                                            <FormControl>
+                                                <SelectTrigger>
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                            </FormControl>
                                             <SelectContent>
-                                                <SelectItem value="hours">Hours</SelectItem>
-                                                <SelectItem value="days">Days</SelectItem>
-                                                <SelectItem value="weeks">Weeks</SelectItem>
-                                                <SelectItem value="months">Months</SelectItem>
-                                                <SelectItem value="years">Years</SelectItem>
-                                                <SelectItem value="lifetime">Lifetime</SelectItem>
+                                                <SelectItem value="active">Active</SelectItem>
+                                                <SelectItem value="expired">Expired</SelectItem>
                                             </SelectContent>
                                         </Select>
                                         <FormMessage />
@@ -186,80 +322,62 @@ export const LicenseEditDialog = ({
                                 )}
                             />
 
-                            <Button>
-                                Add Time
-                                <ClockPlusIcon />
-                            </Button>
+                            <FormField
+                                control={updateForm.control}
+                                name="description"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Description</FormLabel>
+                                        <FormControl>
+                                            <Textarea
+                                                placeholder="Kiroshi's License for Pixelbot 3.0"
+                                                className="resize-none"
+                                                {...field}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
 
-                        </div>
-                    </form>
-                </Form>
+                            <Separator className="my-2" />
 
-                <div className=" rounded-md p-4 flex gap-2 items-center justify-center bg-secondary">
-                    <ClockIcon />
-                    <Label className="text-xl">Time Left: <span className="font-bold">34 days</span></Label>
-                </div>
+                            <div className="flex w-full justify-between">
+                                <div className="flex gap-4">
 
-                <Separator className="my-2" />
+                                    <ButtonLoader
+                                        onClick={handlePause}
+                                        loading={pendingPause}
+                                        icon={isPaused ? PlayIcon : PauseIcon}
+                                        disabled={!allowPause}
+                                    >
+                                        {isPaused ? 'Unpause' : 'Pause'}
+                                    </ButtonLoader>
 
-                <div className="flex flex-col gap-2">
-                    <Label>Change Status</Label>
-                    <Select>
-                        <SelectTrigger>
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="hours">Active</SelectItem>
-                            <SelectItem value="days">Expired</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
+                                    <ButtonLoader
+                                        onClick={handleDelete}
+                                        loading={pendingDelete}
+                                        variant="destructive"
+                                        icon={TrashIcon}
+                                    >
+                                        Delete
+                                    </ButtonLoader>
 
-                <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                        <FormField
-                            control={form.control}
-                            name="description"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Description</FormLabel>
-                                    <FormControl>
-                                        <Textarea
-                                            placeholder="Kiroshi's License for Pixelbot 3.0"
-                                            className="resize-none"
-                                            {...field}
-                                        />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                    </form>
-                </Form>
+                                </div>
 
-                <Separator className="my-2" />
+                                <ButtonLoader
+                                    type="submit"
+                                    loading={pendingUpdate}
+                                    icon={CheckIcon}
+                                >
+                                    Save Changes
+                                </ButtonLoader>
+                            </div>
 
-                <div className="flex w-full justify-between">
-                    <div className="flex gap-4">
+                        </form>
+                    </Form>
 
-                        <Button>
-                            Pause
-                            <PauseIcon fill="white" />
-                        </Button>
-
-                        <Button variant="destructive">
-                            Delete
-                            <TrashIcon />
-                        </Button>
-
-                    </div>
-
-                    <Button>
-                        Save Changes
-                        <CheckIcon />
-                    </Button>
-                </div>
-
+                </>)}
             </DialogContent>
 
         </Dialog >

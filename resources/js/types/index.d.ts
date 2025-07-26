@@ -75,7 +75,9 @@ export interface License {
     updated_at: Date;
 
     product: Product;
+    duration_human: string;
     time_left: number;
+    time_left_human: string;
     is_expired?: boolean;
 }
 

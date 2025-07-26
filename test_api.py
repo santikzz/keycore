@@ -4,7 +4,7 @@ import json
 def test_license_activation():
    
     body = {
-        'key':                  '958014525BD77BB49CD518474FB599FB',
+        'key':                  'BE32-FF59-6F32-9316-6F32-9316',
         'hwid':                 '0000-test-hwid-0000',
         'product_code':         'shodan-ai-premium'
     }

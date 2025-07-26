@@ -26,6 +26,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('licenses', [LicenseController::class, 'create'])->name('licenses.create');
     Route::put('licenses/{license}', [LicenseController::class, 'update'])->name('licenses.update');
     Route::delete('licenses/{license}', [LicenseController::class, 'delete'])->name('licenses.delete');
+    //
+    Route::post('licenses/{license}/reset', [LicenseController::class, 'resetHwid'])->name('licenses.reset-hwid');
+    Route::post('licenses/{license}/pause', [LicenseController::class, 'pause'])->name('licenses.pause');
+    Route::post('licenses/{license}/unpause', [LicenseController::class, 'unpause'])->name('licenses.unpause');
+    Route::post('licenses/{license}/addtime', [LicenseController::class, 'addTime'])->name('licenses.add-time');
 
     Route::get('files', [FileController::class, 'index'])->name('files.index');
     Route::post('files', [FileController::class, 'upload'])->name('files.upload');
@@ -36,7 +41,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ================== JSON API ROUTES ==================
     */
     Route::get('api/products', [ProductController::class, 'apiIndex'])->name('api.products.index');
-
+    Route::get('api/licenses/{license}', [LicenseController::class, 'apiShow'])->name('api.licenses.show');
 
 });
 

@@ -26,8 +26,6 @@ export const LicenseTableDef = ({
     products = []
 }: LicenseTableDefProps) => {
 
-    console.log("data:", data);
-
     const columns: ColumnDef<License>[] = [
         {
             id: "select",
@@ -97,9 +95,9 @@ export const LicenseTableDef = ({
                 )
             },
             cell: ({ row }) => {
-                const isLifetime = row.original.is_lifetime === true;
-                const duration = isLifetime ? 'Lifetime' : secondsToHuman(row.getValue("duration"));
-                return (<span>{duration}</span>)
+                // const isLifetime = row.original.is_lifetime === true;
+                // const duration = isLifetime ? 'Lifetime' : secondsToHuman(row.getValue("duration"));
+                return (<span>{row.original.duration_human}</span>)
             }
         },
         {
@@ -115,7 +113,7 @@ export const LicenseTableDef = ({
                     </Button>
                 )
             },
-            cell: ({ row }) => <span>{row.getValue("time_left") as number > 0 ? secondsToHuman(row.getValue("time_left")) : 'N/A'}</span>,
+            cell: ({ row }) => <span>{row.original.time_left as number > 0 ? row.original.time_left_human : 'N/A'}</span>,
         },
         {
             accessorKey: "status",
@@ -130,7 +128,13 @@ export const LicenseTableDef = ({
                     </Button>
                 )
             },
-            cell: ({ row }) => <LicenseStatusBadge>{row.getValue("status")}</LicenseStatusBadge>,
+            cell: ({ row }) => {
+                const status: string = row.original.paused_at != null ? 'paused' : row.getValue("status");
+                return (
+                    <LicenseStatusBadge status={status}>
+                    </LicenseStatusBadge>
+                )
+            },
         },
         {
             accessorKey: "description",

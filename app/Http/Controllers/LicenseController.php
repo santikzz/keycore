@@ -22,9 +22,9 @@ class LicenseController extends Controller
 
     private static function createLicenseKey()
     {
-        // create a random license key in the format XXXX-XXXX-XXXX-XXXX
-        $key = strtoupper(bin2hex(random_bytes(8)));
-        return substr($key, 0, 4) . '-' . substr($key, 4, 4) . '-' . substr($key, 8, 4) . '-' . substr($key, 12, 4);
+        // create a random license key in the format XXXX-XXXX-XXXX-XXXX-XXXX
+        $key = strtoupper(bin2hex(random_bytes(12)));
+        return substr($key, 0, 4) . '-' . substr($key, 4, 4) . '-' . substr($key, 8, 4) . '-' . substr($key, 12, 4) .'-'. substr($key,8, 4) .'-'. substr($key,12, 4);
     }
 
     public function check(Request $request)
@@ -93,12 +93,17 @@ class LicenseController extends Controller
                 'hwid' => $hwid,
                 'activated_at' => $now,
             ]);
-            return response()->buildResponse($license, 'activated');
+            return $this->buildResponse($license);
         }
 
         // handle active license
         if ($license->status === Codes::ACTIVE) {
 
+            if($license->hwid === null) {
+                // if hwid is null, bind it to the current hwid
+                $license->update(['hwid' => $hwid]);
+            }
+            
             // check hwid binding
             if ($license->hwid !== $hwid) {
                 return ['error' => Codes::HWID_MISMATCH];
@@ -113,7 +118,12 @@ class LicenseController extends Controller
                 }
             }
 
-            return $this->buildResponse($license, Codes::ACTIVE);
+            // check if paused
+            if ($license->paused_at !== null) {
+                return ['error' => Codes::PAUSED];
+            }
+
+            return $this->buildResponse($license);
         }
 
         Log::debug('License status is invalid', [
@@ -123,24 +133,23 @@ class LicenseController extends Controller
         return ['error' => Codes::INVALID];
     }
 
-    private function buildResponse(License $license, string $status)
+    private function buildResponse(License $license)
     {
-        $timeLeft = $license->is_lifetime ? 1 : $license->timeLeft();
-        $humanTimeLeft = $license->timeLeftHuman();
+        $timeLeft = $license->is_lifetime ? 1 : $license->time_left;
 
         return [
-            'status' => $status,
+            'status' => Codes::ACTIVE,
             'time_left' => $timeLeft,
-            'human_time_left' => $humanTimeLeft,
+            'human_time_left' => $license->time_left_human,
             'is_lifetime' => $license->is_lifetime,
             'product_name' => $license->product->name,
+            'error' => null,
         ];
     }
 
     /* ===============================================================
                          MODEL RESOURCE METHODS
     =============================================================== */
-
 
     public function index()
     {
@@ -204,14 +213,102 @@ class LicenseController extends Controller
         }
     }
 
-    public function update(License $license)
+    public function resetHwid(License $license)
     {
-        // Logic to update an existing license
+        try {
+            $license->update(['hwid' => null]);
+            return redirect()->back()->with('message', 'HWID reset successfully');
+        } catch (Exception $e) {
+            return redirect()->back()->with('error', 'Failed to reset HWID - ' . $e->getMessage());
+        }
+    }
+
+    public function pause(License $license)
+    {
+        try {
+            $license->update(['paused_at' => Carbon::now()]);
+            return redirect()->back()->with('message', 'License paused successfully');
+        } catch (Exception $e) {
+            return redirect()->back()->with('error', 'Failed to pause license - ' . $e->getMessage());
+        }
+    }
+
+    public function unpause(License $license)
+    {
+        try {
+
+            /*
+                when a licence is paused, we store the time it was paused,
+                and when unpaused, we calculate the time between now and paused_at (in seconds),
+                then add that time to the duration.
+
+                the abs() is used to ensure we always get a positive value,
+                in case the dates are flipped.
+            */
+            $timeDiff = abs(Carbon::now()->diffInSeconds($license->paused_at));
+
+            $license->update([
+                'paused_at' => null,
+                'duration' => $license->duration + $timeDiff,
+            ]);
+
+            return redirect()->back()->with('message', 'License unpaused successfully');
+        } catch (Exception $e) {
+            return redirect()->back()->with('error', 'Failed to unpause license - ' . $e->getMessage());
+        }
+    }
+
+    public function addTime(Request $request, License $license)
+    {
+        try {
+            $validated = $request->validate([
+                'seconds' => 'required|integer|min:1',
+            ]);
+
+            $seconds = $validated['seconds'];
+            $license->update(['duration' => $license->duration + $seconds]);
+
+            return redirect()->back()->with('message', 'Time added successfully');
+        } catch (Exception $e) {
+            return redirect()->back()->with('error', 'Failed to add time - ' . $e->getMessage());
+        }
+    }
+
+    public function update(Request $request, License $license)
+    {
+        $validated = $request->validate([
+            'status' => 'sometimes|string|in:active,expired',
+            'description' => 'nullable|string|max:255'
+        ]);
+        $license->update($validated);
+        return redirect()->back()->with('message', 'License updated successfully');
     }
 
     public function delete(License $license)
     {
-        // Logic to delete a license
+        try {
+            $license->delete();
+            return redirect()->back()->with('message', 'License deleted successfully');
+        } catch (Exception $e) {
+            return redirect()->back()->with('error', 'Failed to delete license - ' . $e->getMessage());
+        }
+    }
+
+    /* ===============================================================
+                     JSON RESOURCE METHODS
+    =============================================================== */
+
+    public function apiShow(License $license)
+    {
+        $license = License::with('product')
+            ->where('id', $license->id)
+            ->first();
+
+        if (!$license) {
+            return response()->json(['error' => 'License not found'], 404);
+        }
+
+        return response()->json($license);
     }
 
 }

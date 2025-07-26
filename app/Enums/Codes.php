@@ -12,5 +12,7 @@ class Codes
     public const ACTIVE = 'active';
     public const EXPIRED = 'expired';
     public const HWID_MISMATCH = 'hwid_mismatch';
+    public const HWID_RESET = 'hwid_reset';
+    public const PAUSED = 'paused';
 
 }
