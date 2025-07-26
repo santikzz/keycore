@@ -17,7 +17,7 @@ export function useLicense({ licenseId, enabled = true }: UseLicenseOptions) {
     return useQuery<License, Error>({
         queryKey: ['license', licenseId],
         queryFn: () => fetchLicense(licenseId),
-        staleTime: MAX_STALE_TIME,
+        staleTime: 10,
         enabled,
     });
 }

@@ -47,7 +47,7 @@ export const LicenseEditDialog = ({
     const [pendingAddTime, setPendingAddTime] = useState(false);
     const [previewTimeLeft, setPreviewTimeLeft] = useState<number | null>(null);
 
-    const { data, isPending } = useLicense({ licenseId: license.id, enabled: open });
+    const { data, isPending, refetch } = useLicense({ licenseId: license.id, enabled: open });
 
     const addTimeForm = useForm<z.infer<typeof addTimeSchema>>({
         resolver: zodResolver(addTimeSchema),
@@ -72,6 +72,7 @@ export const LicenseEditDialog = ({
                 status: data.status,
                 description: data.description || "",
             });
+            refetch();
         }
     }, [data, updateForm]);
 
@@ -115,7 +116,7 @@ export const LicenseEditDialog = ({
         
         router.put(route('licenses.update', { license: data.id }), values, {
             onSuccess: () => {
-            //    onOpenChange(false);
+               onOpenChange(false);
             },
             onFinish: () => setPendingUpdate(false),
         });
@@ -126,7 +127,7 @@ export const LicenseEditDialog = ({
         setPendingResetHwid(true);
         router.post(route('licenses.reset-hwid', { license: data.id }), {}, {
             onSuccess: () => {
-                // onOpenChange(false);
+                onOpenChange(false);
             },
             onFinish: () => setPendingResetHwid(false),
         });
@@ -182,7 +183,7 @@ export const LicenseEditDialog = ({
                                 <KeyIcon className="size-4" />
                             </div>
                             <span className="text-muted-foreground pointer-events-none absolute inset-y-0 end-0 flex items-center justify-center pe-2 text-sm peer-disabled:opacity-50">
-                                <LicenseStatusBadge status={data?.status || "unknown"}/>
+                                <LicenseStatusBadge status={data?.c_status || "unknown"}/>
                             </span>
                         </div>
                     </div>
@@ -208,7 +209,7 @@ export const LicenseEditDialog = ({
                         </div>
                     </div>
 
-                    <Separator className="my-2" />
+                    {/* <Separator className="my-2" />
 
                     <Form {...addTimeForm}>
                         <form onSubmit={addTimeForm.handleSubmit(onAddTime)} className="space-y-4">
@@ -292,7 +293,7 @@ export const LicenseEditDialog = ({
                                 </span>
                             )}
                         </Label>
-                    </div>
+                    </div> */}
 
                     <Separator className="my-2" />
 
@@ -350,6 +351,7 @@ export const LicenseEditDialog = ({
                                         loading={pendingPause}
                                         icon={isPaused ? PlayIcon : PauseIcon}
                                         disabled={!allowPause}
+                                        // disabled={true} // TODO: fix pause logic
                                     >
                                         {isPaused ? 'Unpause' : 'Pause'}
                                     </ButtonLoader>

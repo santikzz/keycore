@@ -12,8 +12,12 @@
 */
 
 pest()->extend(Tests\TestCase::class)
- // ->use(Illuminate\Foundation\Testing\RefreshDatabase::class)
+    ->use(Illuminate\Foundation\Testing\RefreshDatabase::class)
     ->in('Feature');
+
+// Unit tests that don't need database
+pest()->extend(PHPUnit\Framework\TestCase::class)
+    ->in('Unit');
 
 /*
 |--------------------------------------------------------------------------

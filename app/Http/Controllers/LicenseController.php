@@ -153,8 +153,7 @@ class LicenseController extends Controller
 
     public function index()
     {
-        $licenses = License::select('id', 'product_id', 'license_key', 'duration', 'status', 'description', 'is_lifetime', 'created_at')
-            ->orderBy('id', 'desc')
+        $licenses = License::orderBy('id', 'desc')
             ->with('product:id,name')
             ->get();
 

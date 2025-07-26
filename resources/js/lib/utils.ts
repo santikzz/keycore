@@ -2,7 +2,7 @@ import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { intervalToDuration, formatDuration } from 'date-fns'
 
-export const MAX_STALE_TIME = 1000 * 60 * 5; // 5 minutes
+export const MAX_STALE_TIME = 10; // 10 seconds
 
 export function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));

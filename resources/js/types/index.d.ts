@@ -79,6 +79,7 @@ export interface License {
     time_left: number;
     time_left_human: string;
     is_expired?: boolean;
+    c_status: string;
 }
 
 export interface File {

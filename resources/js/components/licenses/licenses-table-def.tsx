@@ -26,6 +26,8 @@ export const LicenseTableDef = ({
     products = []
 }: LicenseTableDefProps) => {
 
+    console.log(data);
+    
     const columns: ColumnDef<License>[] = [
         {
             id: "select",
@@ -129,10 +131,8 @@ export const LicenseTableDef = ({
                 )
             },
             cell: ({ row }) => {
-                const status: string = row.original.paused_at != null ? 'paused' : row.getValue("status");
                 return (
-                    <LicenseStatusBadge status={status}>
-                    </LicenseStatusBadge>
+                    <LicenseStatusBadge status={row.original.c_status}/>
                 )
             },
         },

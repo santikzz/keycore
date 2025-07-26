@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AuthLayout from '@/layouts/auth-layout';
 import ASCIIText from '@/components/ascii-text';
+import useScrollLock from '@/hooks/use-scroll-lock';
 
 type LoginForm = {
     email: string;
@@ -27,6 +28,8 @@ export default function Login({ status, canResetPassword }: LoginProps) {
     const [isVisible, setIsVisible] = useState<boolean>(false)
     const toggleVisibility = () => setIsVisible((prevState) => !prevState)
 
+    useScrollLock({ autoLock: true });
+
     const { data, setData, post, processing, errors, reset } = useForm<Required<LoginForm>>({
         email: '',
         password: '',
@@ -43,16 +46,18 @@ export default function Login({ status, canResetPassword }: LoginProps) {
     return (
         <>
             <Head title="Log in" />
-            <main className="flex h-screen w-screen overflow-hidden">
+            <main className="flex max-h-screen">
 
-                <div className="flex-1 bg-black border-r overflow-hidden">
+                <div className="flex-1 bg-black border-r">
                     {/* <img src="/wallhaven-kxo391.jpg" className='w-full h-full object-cover' alt="KeyCore Background" /> */}
                     <img src="/wallhaven-je8qlp.jpg" className='w-full h-full object-cover brightness-75 saturate-125' alt="KeyCore Background" />
                 </div>
 
-                <ASCIIText text='KeyCore' />
 
-                <form className="flex flex-col gap-4 flex-1 justify-center items-center" onSubmit={submit}>
+                <form className="flex flex-col gap-4 flex-1 justify-center items-center relative overflow-hidden" onSubmit={submit}>
+
+                    <ASCIIText text='KeyCore' />
+
                     <div className="flex flex-col gap-4 min-w-md">
                         <div className="grid gap-2">
                             {/* <Label htmlFor="email">Email address</Label> */}
