@@ -11,6 +11,10 @@ Route::get('/', function () {
     return Inertia::render('welcome');
 })->name('home');
 
+Route::get('download', [WebController::class, 'download'])->name('download');
+Route::post('download/search', [WebController::class, 'downloadSearch'])->name('download.search');
+Route::post('download/file', [WebController::class, 'downloadFile'])->name('download.file');
+
 Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('dashboard', function () {
