@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\Codes;
 use App\Models\File;
 use App\Models\License;
 use Exception;
@@ -27,9 +28,10 @@ class WebController extends Controller
         $licenseKey = $validated['license_key'];
 
         try {
-            // First, verify the license is valid and active
-            $license = \App\Models\License::where('license_key', $licenseKey)->first();
-            if (!$license || $license->c_status !== \App\Enums\Codes::ACTIVE) {
+
+            // first, verify the license is valid and active
+            $license = License::where('license_key', $licenseKey)->first();
+            if (!$license || $license->c_status !== Codes::ACTIVE) {
                 return response()->json([
                     'files' => [],
                     'count' => 0,
@@ -37,36 +39,26 @@ class WebController extends Controller
                 ], 403);
             }
 
-            // Find files where is_downloadable is true and is_hidden is false
-            // Only for licenses that match the provided key and are active
+            // find files where is_downloadable is true and is_hidden is false
+            // only for licenses that match the provided key and are active
             $files = File::where('is_downloadable', true)
                 ->where('is_hidden', false)
                 ->whereHas('product.licenses', function ($query) use ($licenseKey) {
                     $query->where('license_key', $licenseKey)
-                          ->where('status', \App\Enums\Codes::ACTIVE);
+                          ->where('status', Codes::ACTIVE);
                 })
                 ->select(['id', 'custom_name', 'file_name', 'product_id', 'created_at'])
                 ->orderBy('created_at', 'desc')
                 ->get();
 
-            // Log the search for audit purposes
-            Log::info('File search performed', [
-                'license_key' => $licenseKey,
-                'files_found' => $files->count(),
-                'user_ip' => $request->ip(),
-            ]);
-
             return response()->json([
                 'files' => $files,
-                'count' => $files->count()
+                'count' => $files->count(),
+                'time_left' => $license->time_left,
+                'time_left_human' => $license->time_left_human,
             ]);
 
         } catch (Exception $e) {
-            Log::error('Error searching files: ' . $e->getMessage(), [
-                'license_key' => $licenseKey,
-                'user_ip' => $request->ip(),
-                'stack_trace' => $e->getTraceAsString(),
-            ]);
             return response()->json(['error' => 'Error searching files.'], 500);
         }
     }
@@ -84,7 +76,7 @@ class WebController extends Controller
 
             // First, verify the license is valid and active
             $license = License::where('license_key', $licenseKey)->first();
-            if (!$license || $license->c_status !== \App\Enums\Codes::ACTIVE) {
+            if (!$license || $license->c_status !== Codes::ACTIVE) {
                 return response()->json(['error' => 'Invalid or inactive license.'], 403);
             }
 
@@ -92,7 +84,7 @@ class WebController extends Controller
                 ->where('is_hidden', false)
                 ->whereHas('product.licenses', function ($query) use ($licenseKey) {
                     $query->where('license_key', $licenseKey)
-                          ->where('status', \App\Enums\Codes::ACTIVE);
+                          ->where('status', Codes::ACTIVE);
                 })
                 ->where('id', $fileId)
                 ->first();

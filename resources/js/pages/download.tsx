@@ -12,12 +12,12 @@ export default function DownloadPage() {
 
     const [isLoading, setIsLoading] = useState(false);
     const [licenseKey, setLicenseKey] = useState("");
-    const [files, setFiles] = useState<File[]>([]);
+    const [data, setData] = useState(null);
     const [error, setError] = useState<string | null>(null);
 
     const handleSearch = async () => {
         setIsLoading(true);
-        setFiles([]);
+        setData(null);
         setError(null);
 
         if (!licenseKey.trim()) {
@@ -31,9 +31,10 @@ export default function DownloadPage() {
 
             if (response.data.error) {
                 setError(response.data.error);
-                setFiles([]);
+                console.log(response.data)
+                setData(response.data);
             } else {
-                setFiles(response.data.files || []);
+                setData(null);
                 if (response.data.files && response.data.files.length === 0) {
                     setError("No files found for this license key");
                 }
@@ -51,7 +52,7 @@ export default function DownloadPage() {
             } else {
                 setError("Failed to search files. Please try again.");
             }
-            setFiles([]);
+            setData(null);
         } finally {
             setIsLoading(false);
         }
@@ -99,11 +100,20 @@ export default function DownloadPage() {
 
             <div className="flex flex-col gap-4 w-[40rem]">
 
+                {data && (
+                    <Card className="p-4">
+                        <div className="flex justify-between items-center">
+                            <span className="text-sm text-muted-foreground">Time left:</span>
+                            <span className="text-lg font-semibold">{data?.time_left_human}</span>
+                        </div>
+                    </Card>
+                )}
+
                 <Card className="p-4">
 
                     <div className="flex flex-col gap-4">
                         <div className="relative">
-                            <Input className="peer ps-9 pe-9"
+                            <Input className="peer ps-9"
                                 placeholder="Enter your license key"
                                 type="text"
                                 value={licenseKey}
@@ -112,11 +122,6 @@ export default function DownloadPage() {
                             <div className="text-muted-foreground/80 pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-3 peer-disabled:opacity-50">
                                 <KeyIcon className="size-4" />
                             </div>
-                            {isLoading && (
-                                <div className="text-muted-foreground/80 pointer-events-none absolute inset-y-0 end-0 flex items-center justify-center pe-3 peer-disabled:opacity-50">
-                                    <Loader2 className="animate-spin size-4 text-primary" />
-                                </div>
-                            )}
                         </div>
 
                         <Button
@@ -138,9 +143,9 @@ export default function DownloadPage() {
 
                 </Card>
 
-                {files.length > 0 && (
+                {data && (
                     <Card className="p-4 flex flex-col gap-4">
-                        {files?.map((file: File, index) => (
+                        {data?.files?.map((file: File, index) => (
                             <div className="flex justify-between items-center">
                                 <span>{file.custom_name}</span>
                                 <Button

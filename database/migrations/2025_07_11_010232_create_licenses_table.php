@@ -20,8 +20,8 @@ return new class extends Migration
             $table->string('hwid')->nullable();
             $table->string('description')->nullable();
             $table->boolean('is_lifetime')->default(false);
-            $table->date('activated_at')->nullable();
-            $table->date('paused_at')->nullable();
+            $table->datetime('activated_at')->nullable();
+            $table->datetime('paused_at')->nullable();
             $table->timestamps();
         });
     }
