@@ -1,11 +1,14 @@
+import ASCIIText from "@/components/ascii-text";
 import { ButtonLoader } from "@/components/custom/button-loader";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 import { File } from "@/types";
 import axios from "axios";
 import { set } from "date-fns";
-import { DownloadIcon, KeyIcon, Loader2, SearchIcon } from "lucide-react";
+import { ClockFadingIcon, DownloadIcon, KeyIcon, Loader2, SearchIcon } from "lucide-react";
 import { useState } from "react";
 
 export default function DownloadPage() {
@@ -15,7 +18,10 @@ export default function DownloadPage() {
     const [data, setData] = useState(null);
     const [error, setError] = useState<string | null>(null);
 
-    const handleSearch = async () => {
+    const showInfo = data !== null && data?.count > 0;
+
+    const handleSearch = async (e: Event) => {
+        e.preventDefault();
         setIsLoading(true);
         setData(null);
         setError(null);
@@ -29,24 +35,27 @@ export default function DownloadPage() {
         try {
             const response = await axios.post(route("download.search"), { license_key: licenseKey });
 
+            // handle errors
             if (response.data.error) {
                 setError(response.data.error);
-                console.log(response.data)
-                setData(response.data);
             } else {
                 setData(null);
                 if (response.data.files && response.data.files.length === 0) {
                     setError("No files found for this license key");
                 }
             }
-            console.log("Files fetched:", response.data);
+
+            console.log("Search response:", response.data);
+            setData(response.data);
+
         } catch (error: any) {
             console.error("Error fetching files:", error);
-
             if (error.response?.status === 403) {
                 setError("Invalid or inactive license key");
             } else if (error.response?.status === 422) {
                 setError("Invalid license key format");
+            } else if (error.response?.status === 429) {
+                setError("Too many requests. Please try again later.");
             } else if (error.response?.data?.error) {
                 setError(error.response.data.error);
             } else {
@@ -62,15 +71,15 @@ export default function DownloadPage() {
         try {
             setError(null);
 
-            // Make request for download
+            // make request for download
             const response = await axios.post(route("download.file"), {
                 file_id: file.id,
                 license_key: licenseKey
             }, {
-                responseType: 'blob' // Important for file downloads
+                responseType: 'blob' // for file downloads
             });
 
-            // Create blob link and download
+            // create blob link and download
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');
             link.href = url;
@@ -87,6 +96,8 @@ export default function DownloadPage() {
                 setError("License key is invalid or expired");
             } else if (error.response?.status === 404) {
                 setError("File not found");
+            } else if (error.response?.status === 429) {
+                setError("Too many requests. Please try again later.");
             } else if (error.response?.data?.error) {
                 setError(error.response.data.error);
             } else {
@@ -98,22 +109,28 @@ export default function DownloadPage() {
     return (
         <main className="flex justify-center items-center min-h-screen w-full">
 
-            <div className="flex flex-col gap-4 w-[40rem]">
+            <ASCIIText text='Skynet' className="absolute inset-0 -translate-y-[12rem] overflow-hidden z-10" />
 
-                {data && (
-                    <Card className="p-4">
+            <div className="flex flex-col gap-4 w-[40rem] z-50">
+
+                {showInfo && (
+                    <Card className="p-4 animate-in fade-in-50 slide-in-from-bottom-4 duration-500">
                         <div className="flex justify-between items-center">
-                            <span className="text-sm text-muted-foreground">Time left:</span>
-                            <span className="text-lg font-semibold">{data?.time_left_human}</span>
+                            <span className="text-lg font-semibold">{data?.product_name}</span>
+
+                            <div className="flex items-center gap-2">
+                                <ClockFadingIcon className="size-4 text-primary" />
+                                <span className="text-lg font-semibold">{data?.time_left_human}</span>
+                            </div>
                         </div>
                     </Card>
                 )}
 
                 <Card className="p-4">
 
-                    <div className="flex flex-col gap-4">
-                        <div className="relative">
-                            <Input className="peer ps-9"
+                    <form className="flex flex-row gap-2" onSubmit={handleSearch}>
+                        <div className="relative w-full">
+                            <Input className="peer ps-9 text-center flex-1"
                                 placeholder="Enter your license key"
                                 type="text"
                                 value={licenseKey}
@@ -125,28 +142,21 @@ export default function DownloadPage() {
                         </div>
 
                         <Button
-                            type="button"
-                            onClick={handleSearch}
+                            type="submit"
                             disabled={isLoading || !licenseKey}
+                            className="w-9 z-40"
                         >
                             {isLoading ? (<Loader2 className="animate-spin size-4" />) : (<SearchIcon className="size-4" />)}
-                            Search
                         </Button>
 
-                        {error && (
-                            <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
-                                {error}
-                            </div>
-                        )}
-
-                    </div>
+                    </form>
 
                 </Card>
 
-                {data && (
-                    <Card className="p-4 flex flex-col gap-4">
+                {showInfo && (
+                    <Card className="p-4 flex flex-col gap-4 animate-in fade-in-50 slide-in-from-top-4 duration-500">
                         {data?.files?.map((file: File, index) => (
-                            <div className="flex justify-between items-center">
+                            <div key={index} className="flex justify-between items-center">
                                 <span>{file.custom_name}</span>
                                 <Button
                                     className="size-8"
@@ -158,6 +168,13 @@ export default function DownloadPage() {
                         ))}
                     </Card>
                 )}
+
+                {error && (
+                    <Label className="text-red-600 text-center">
+                        {error}
+                    </Label>
+                )}
+
 
             </div>
 

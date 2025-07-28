@@ -56,7 +56,7 @@ export default function Login({ status, canResetPassword }: LoginProps) {
 
                 <form className="flex flex-col gap-4 flex-1 justify-center items-center relative overflow-hidden" onSubmit={submit}>
 
-                    <ASCIIText text='KeyCore' />
+                    <ASCIIText text='Skynet' className="absolute inset-0 -translate-y-[12rem] overflow-hidden" />
 
                     <div className="flex flex-col gap-4 min-w-md">
                         <div className="grid gap-2">

@@ -1,3 +1,4 @@
+import { cn } from "@/lib/utils";
 import { useRef, useEffect } from "react";
 import * as THREE from "three";
 
@@ -517,6 +518,7 @@ interface ASCIITextProps {
     textColor?: string;
     planeBaseHeight?: number;
     enableWaves?: boolean;
+    className?: string;
 }
 
 export default function ASCIIText({
@@ -527,6 +529,7 @@ export default function ASCIIText({
     textColor = "oklch(87% 0.065 274.039)",
     planeBaseHeight = 3.75,
     enableWaves = true,
+    className = "",
 }: ASCIITextProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const asciiRef = useRef<CanvAscii | null>(null);
@@ -619,7 +622,7 @@ export default function ASCIIText({
     return (
         <div
             ref={containerRef}
-            className="ascii-text-container absolute inset-0 -translate-y-[12rem] overflow-hidden"
+            className={cn("ascii-text-container", className)}
             // style={{
             //     position: "absolute",
             //     width: "100%",

@@ -10,9 +10,15 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\RateLimiter;
 
 class WebController extends Controller
 {
+
+    private const RATE_LIMIT_KEY = 'license_search';
+    private const RATE_LIMIT_ATTEMPTS = 5;
+    private const RATE_LIMIT_DECAY = 60; // seconds
+    private const CACHE_TTL = 300; // 5 minutes
 
     public function download()
     {
@@ -21,6 +27,13 @@ class WebController extends Controller
 
     public function downloadSearch(Request $request)
     {
+
+        $rateLimitKey = self::RATE_LIMIT_KEY . $request->ip();
+        if (RateLimiter::tooManyAttempts($rateLimitKey, self::RATE_LIMIT_ATTEMPTS)) {
+            return response()->json(['error' => 'too_many_requests'], 429);
+        }
+        RateLimiter::hit($rateLimitKey, self::RATE_LIMIT_DECAY);
+
         $validated = $request->validate([
             'license_key' => 'required|string|max:255',
         ]);
@@ -45,7 +58,7 @@ class WebController extends Controller
                 ->where('is_hidden', false)
                 ->whereHas('product.licenses', function ($query) use ($licenseKey) {
                     $query->where('license_key', $licenseKey)
-                          ->where('status', Codes::ACTIVE);
+                        ->where('status', Codes::ACTIVE);
                 })
                 ->select(['id', 'custom_name', 'file_name', 'product_id', 'created_at'])
                 ->orderBy('created_at', 'desc')
@@ -56,6 +69,7 @@ class WebController extends Controller
                 'count' => $files->count(),
                 'time_left' => $license->time_left,
                 'time_left_human' => $license->time_left_human,
+                'product_name' => $license->product->name,
             ]);
 
         } catch (Exception $e) {
@@ -84,7 +98,7 @@ class WebController extends Controller
                 ->where('is_hidden', false)
                 ->whereHas('product.licenses', function ($query) use ($licenseKey) {
                     $query->where('license_key', $licenseKey)
-                          ->where('status', Codes::ACTIVE);
+                        ->where('status', Codes::ACTIVE);
                 })
                 ->where('id', $fileId)
                 ->first();
@@ -104,7 +118,7 @@ class WebController extends Controller
 
             // Get the file path directly instead of copying to temp
             $filePath = Storage::disk('local')->path($file->file_path);
-            
+
             // Security check: ensure the file path is within the storage directory
             $storagePath = Storage::disk('local')->path('');
             if (!str_starts_with(realpath($filePath), realpath($storagePath))) {
@@ -117,7 +131,7 @@ class WebController extends Controller
                 ]);
                 return response()->json(['error' => 'Access denied.'], 403);
             }
-            
+
             // Check if file exists on disk
             if (!file_exists($filePath)) {
                 return response()->json(['error' => 'File not accessible.'], 404);

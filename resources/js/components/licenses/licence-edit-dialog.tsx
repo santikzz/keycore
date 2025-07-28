@@ -141,7 +141,7 @@ export const LicenseEditDialog = ({
         
         router.post(route(routeName, { license: data.id }), {}, {
             onSuccess: () => {
-                // onOpenChange(false);
+                onOpenChange(false);
             },
             onFinish: () => setPendingPause(false),
         });
