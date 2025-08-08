@@ -79,6 +79,13 @@ class WebController extends Controller
 
     public function downloadFile(Request $request)
     {
+
+        $rateLimitKey = self::RATE_LIMIT_KEY . $request->ip();
+        if (RateLimiter::tooManyAttempts($rateLimitKey, self::RATE_LIMIT_ATTEMPTS)) {
+            return response()->json(['error' => 'too_many_requests'], 429);
+        }
+        RateLimiter::hit($rateLimitKey, self::RATE_LIMIT_DECAY);
+
         $validated = $request->validate([
             'file_id' => 'required|integer|exists:files,id',
             'license_key' => 'required|string|max:255',

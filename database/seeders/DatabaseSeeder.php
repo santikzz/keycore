@@ -47,13 +47,13 @@ class DatabaseSeeder extends Seeder
         ]);
 
         Product::create([
-            'name' => 'Core Pixelbot v3',
-            'product_code' => 'core-pixelbot-v3'
+            'name' => 'Core Pixelbot v3 Test',
+            'product_code' => 'core-pixelbot-v3-test'
         ]);
 
         Product::create([
-            'name' => 'Shodan AI Premium',
-            'product_code' => 'shodan-ai-premium'
+            'name' => 'Shodan AI Premium Test',
+            'product_code' => 'shodan-ai-premium-test'
         ]);
 
     }
