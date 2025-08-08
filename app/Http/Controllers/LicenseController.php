@@ -19,31 +19,64 @@ class LicenseController extends Controller
     private const RATE_LIMIT_ATTEMPTS = 5;
     private const RATE_LIMIT_DECAY = 60; // seconds
     private const CACHE_TTL = 300; // 5 minutes
+    private const RATE_LIMIT_ATTEMPTS_PER_LICENSE = 10; // per license key
+    private const RATE_LIMIT_ATTEMPTS_PER_HWID = 15; // per hardware ID
+
 
     private static function createLicenseKey()
     {
-        // create a random license key in the format XXXX-XXXX-XXXX-XXXX-XXXX
-        $key = strtoupper(bin2hex(random_bytes(12)));
-        return substr($key, 0, 4) . '-' . substr($key, 4, 4) . '-' . substr($key, 8, 4) . '-' . substr($key, 12, 4) .'-'. substr($key,8, 4) .'-'. substr($key,12, 4);
+        // create a random license key in the format XXXX-XXXX-XXXX-XXXX-XXXX-XXXX
+        // Using 24 random bytes (192 bits of entropy) for maximum security
+        $key = strtoupper(bin2hex(random_bytes(24)));
+        return substr($key, 0, 4) . '-' . 
+               substr($key, 4, 4) . '-' . 
+               substr($key, 8, 4) . '-' . 
+               substr($key, 12, 4) . '-' . 
+               substr($key, 16, 4) . '-' . 
+               substr($key, 20, 4);
     }
 
     public function check(Request $request)
     {
+        // Multi-layer rate limiting to prevent abuse
+        $clientIp = $request->ip();
+        $licenseKey = $request->input('key', '');
+        $hwid = $request->input('hwid', '');
+        
+        // Create multiple rate limiting keys for different attack vectors
+        $rateLimitChecks = [
+            ['key' => 'ip:' . $clientIp, 'limit' => self::RATE_LIMIT_ATTEMPTS],
+            ['key' => 'license:' . hash('sha256', $licenseKey), 'limit' => self::RATE_LIMIT_ATTEMPTS_PER_LICENSE],
+            ['key' => 'hwid:' . hash('sha256', $hwid), 'limit' => self::RATE_LIMIT_ATTEMPTS_PER_HWID],
+        ];
 
-        // rate limiting to prevent abuse
-        $rateLimitKey = self::RATE_LIMIT_KEY . $request->ip();
-        if (RateLimiter::tooManyAttempts($rateLimitKey, self::RATE_LIMIT_ATTEMPTS)) {
-            return response()->json(['error' => 'too_many_requests'], 429);
+        // Check rate limits for each key with specific limits
+        foreach ($rateLimitChecks as $check) {
+            $fullKey = self::RATE_LIMIT_KEY . ':' . $check['key'];
+            if (RateLimiter::tooManyAttempts($fullKey, $check['limit'])) {
+                // Log potential abuse
+                Log::warning('Rate limit exceeded', [
+                    'key_type' => explode(':', $check['key'])[0],
+                    'ip' => $clientIp,
+                    'user_agent' => $request->userAgent(),
+                ]);
+                return response()->json(['error' => 'too_many_requests'], 429);
+            }
         }
-        RateLimiter::hit($rateLimitKey, self::RATE_LIMIT_DECAY);
+
+        // Hit all rate limiters
+        foreach ($rateLimitChecks as $check) {
+            $fullKey = self::RATE_LIMIT_KEY . ':' . $check['key'];
+            RateLimiter::hit($fullKey, self::RATE_LIMIT_DECAY);
+        }
 
         // ssl check
         if (!$request->secure() && !app()->environment('local')) {
-            return response()->json(['error' => 'ssl_error'], 200);
+            return response()->json(['error' => 'ssl_error'], 400);
         }
 
         $request->validate([
-            'key' => 'required|string|min:5|max:100',
+            'key' => 'required|string|regex:/^[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{4}$/|size:29',
             'hwid' => 'required|string|min:5|max:200',
             'product_code' => 'required|string|max:50',
             'format' => 'sometimes|string|in:json,plain,csv'
@@ -51,12 +84,9 @@ class LicenseController extends Controller
 
         // if is invalid request, return error
         if (!$request->has('key') || !$request->has('hwid') || !$request->has('product_code')) {
-            return response()->json(['error' => Codes::INVALID], 200);
+            return response()->json(['error' => Codes::INVALID], 400);
         }
 
-        $licenseKey = $request->input('key');
-        $hwid = $request->input('hwid');
-        // $hwid = hash('sha256', $request->input('hwid')); // Hash HWID for privacy
         $productCode = $request->input('product_code');
         $format = $request->input('format', 'json');
 
@@ -68,17 +98,33 @@ class LicenseController extends Controller
             ->first();
 
         if (!$license) {
-            return response()->json(['error' => Codes::INVALID], 200);
+            return response()->json(['error' => Codes::INVALID], 404);
         }
 
         $result = $this->processLicense($license, $hwid);
-        return response()->json($result, 200);
-
+        
+        // Determine appropriate HTTP status code based on result
+        $statusCode = 200;
+        if (isset($result['error'])) {
+            switch ($result['error']) {
+                case Codes::EXPIRED:
+                case Codes::HWID_MISMATCH:
+                case Codes::PAUSED:
+                    $statusCode = 403; // Forbidden
+                    break;
+                case Codes::INVALID:
+                    $statusCode = 404; // Not Found
+                    break;
+                default:
+                    $statusCode = 400; // Bad Request
+            }
+        }
+        
+        return response()->json($result, $statusCode);
     }
 
     private function processLicense(License $license, string $hwid)
     {
-
         $now = Carbon::now();
 
         // check if already expired

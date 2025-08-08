@@ -4,7 +4,7 @@ use App\Http\Controllers\LicenseController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::post('/license/check', [LicenseController::class, 'check'])
+Route::post('/v1/license/check', [LicenseController::class, 'check'])
     ->middleware(['throttle:60,1']) // 60 requests per minute
     ->name('api.license.check');
 
