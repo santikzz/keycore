@@ -26,8 +26,6 @@ export const LicenseTableDef = ({
     products = []
 }: LicenseTableDefProps) => {
 
-    console.log(data);
-    
     const columns: ColumnDef<License>[] = [
         {
             id: "select",
@@ -50,6 +48,16 @@ export const LicenseTableDef = ({
             ),
             enableSorting: false,
             enableHiding: false,
+        },
+        {
+            id: "hwid_searchable",
+            accessorFn: (row) => row.hwid || "",
+            enableColumnFilter: false,
+            enableSorting: false,
+            enableHiding: false,
+            meta: {
+                isSearchOnly: true,
+            },
         },
         {
             accessorKey: "license_key",
@@ -132,7 +140,7 @@ export const LicenseTableDef = ({
             },
             cell: ({ row }) => {
                 return (
-                    <LicenseStatusBadge status={row.original.c_status}/>
+                    <LicenseStatusBadge status={row.original.c_status} />
                 )
             },
         },
@@ -175,6 +183,9 @@ export const LicenseTableDef = ({
     const [rowSelection, setRowSelection] = useState({})
     const [globalFilter, setGlobalFilter] = useState("");
     const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 15, });
+    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
+        hwid_searchable: false,
+    });
 
     const table = useReactTable({
         data,
@@ -187,11 +198,13 @@ export const LicenseTableDef = ({
         onRowSelectionChange: setRowSelection,
         onGlobalFilterChange: setGlobalFilter,
         onPaginationChange: setPagination,
+        onColumnVisibilityChange: setColumnVisibility,
         state: {
             sorting,
             rowSelection,
             globalFilter,
-            pagination
+            pagination,
+            columnVisibility,
         },
     })
 

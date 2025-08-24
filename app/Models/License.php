@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\Codes;
+use App\Services\LicenseGenerateService;
 use Carbon\Carbon;
 use Carbon\CarbonInterval;
 use Illuminate\Database\Eloquent\Model;
@@ -41,6 +42,23 @@ class License extends Model
         'c_status',
     ];
 
+    protected static function boot()
+    {
+        parent::boot();
+        
+        static::creating(function ($license) {
+
+            $license->license_key = LicenseGenerateService::create();
+            $license->status = Codes::UNUSED;
+            $license->hwid = null;
+
+        });
+        // static::updating(function ($license) {
+        // });
+        // static::deleting(function ($license) {
+        // });
+    }
+
     /*
         ============= MODEL RELATIONS =============
     */
@@ -73,19 +91,19 @@ class License extends Model
         if ($this->is_lifetime) {
             return 1;
         }
-        
+
         // if not activated yet, return the full duration
         if (!$this->activated_at) {
             return $this->duration;
         }
-        
+
         // calculate expiration time
         $activatedAt = Carbon::parse($this->activated_at);
         $expirationTime = $activatedAt->addSeconds($this->duration);
-        
+
         // calculate seconds left until expiration
         $secondsLeft = floor(Carbon::now()->diffInSeconds($expirationTime, false));
-        
+
         // return 0 if expired, otherwise return seconds left
         return max(0, $secondsLeft);
     }
@@ -95,11 +113,11 @@ class License extends Model
         if ($this->is_lifetime) {
             return 'Lifetime';
         }
-        
+
         if ($this->time_left <= 0) {
             return '0 seconds';
         }
-        
+
         return CarbonInterval::seconds($this->time_left)
             ->cascade()
             ->forHumans(['short' => true]);
@@ -110,11 +128,11 @@ class License extends Model
         if ($this->getRawOriginal('status') === Codes::EXPIRED) {
             return true;
         }
-        
+
         if (!$this->activated_at || $this->is_lifetime) {
             return false;
         }
-        
+
         $activatedAt = Carbon::parse($this->activated_at);
         $expirationTime = $activatedAt->addSeconds($this->duration);
         return Carbon::now()->greaterThan($expirationTime);
@@ -127,7 +145,7 @@ class License extends Model
         if ($rawPausedAt !== null && $rawPausedAt !== '' && $rawPausedAt !== '0000-00-00') {
             return Codes::PAUSED;
         }
-        
+
         // Check if license has expired based on time (even if DB status isn't updated)
         if ($this->activated_at && !$this->is_lifetime) {
             $activatedAt = Carbon::parse($this->activated_at);
@@ -136,10 +154,9 @@ class License extends Model
                 return Codes::EXPIRED;
             }
         }
-        
+
         // Return the original status (unused, active, expired)
         return $this->getRawOriginal('status');
     }
-
 
 }

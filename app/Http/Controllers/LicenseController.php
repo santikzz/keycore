@@ -28,12 +28,12 @@ class LicenseController extends Controller
         // create a random license key in the format XXXX-XXXX-XXXX-XXXX-XXXX-XXXX
         // Using 24 random bytes (192 bits of entropy) for maximum security
         $key = strtoupper(bin2hex(random_bytes(24)));
-        return substr($key, 0, 4) . '-' . 
-               substr($key, 4, 4) . '-' . 
-               substr($key, 8, 4) . '-' . 
-               substr($key, 12, 4) . '-' . 
-               substr($key, 16, 4) . '-' . 
-               substr($key, 20, 4);
+        return substr($key, 0, 4) . '-' .
+            substr($key, 4, 4) . '-' .
+            substr($key, 8, 4) . '-' .
+            substr($key, 12, 4) . '-' .
+            substr($key, 16, 4) . '-' .
+            substr($key, 20, 4);
     }
 
     public function check(Request $request)
@@ -42,7 +42,7 @@ class LicenseController extends Controller
         $clientIp = $request->ip();
         $licenseKey = $request->input('key', '');
         $hwid = $request->input('hwid', '');
-        
+
         // Create multiple rate limiting keys for different attack vectors
         $rateLimitChecks = [
             ['key' => 'ip:' . $clientIp, 'limit' => self::RATE_LIMIT_ATTEMPTS],
@@ -102,7 +102,7 @@ class LicenseController extends Controller
         }
 
         $result = $this->processLicense($license, $hwid);
-        
+
         // Determine appropriate HTTP status code based on result
         $statusCode = 200;
         if (isset($result['error'])) {
@@ -119,7 +119,7 @@ class LicenseController extends Controller
                     $statusCode = 400; // Bad Request
             }
         }
-        
+
         return response()->json($result, $statusCode);
     }
 
@@ -145,11 +145,11 @@ class LicenseController extends Controller
         // handle active license
         if ($license->status === Codes::ACTIVE) {
 
-            if($license->hwid === null) {
+            if ($license->hwid === null) {
                 // if hwid is null, bind it to the current hwid
                 $license->update(['hwid' => $hwid]);
             }
-            
+
             // check hwid binding
             if ($license->hwid !== $hwid) {
                 return ['error' => Codes::HWID_MISMATCH];
@@ -234,27 +234,28 @@ class LicenseController extends Controller
             $createdLicenses = [];
 
             for ($i = 0; $i < $amount; $i++) {
-                $createdLicenses[] = [
+                $createdLicenses[] = License::create([
                     'product_id' => $product->id,
-                    'license_key' => LicenseController::createLicenseKey(),
                     'duration' => $validated['duration'],
-                    'status' => 'unused',
-                    'hwid' => null,
+                    // 'license_key' => LicenseController::createLicenseKey(),
+                    // 'status' => 'unused',
+                    // 'hwid' => null,
                     'description' => $validated['description'] ?? null,
                     'is_lifetime' => $validated['is_lifetime'] ?? false,
-                ];
+                ]);
             }
 
-            License::insert($createdLicenses);
+            // License::insert($createdLicenses);
 
-            if ($isExport) {
-                // TODO: export txt file
-            }
-
-            return redirect()->back()->with('message', 'Licenses created successfully');
+            return response()->json([
+                'success' => 'Licenses created successfully',
+                'created_licenses' => $createdLicenses,
+                'is_export' => $isExport,
+            ], 200);
 
         } catch (Exception $e) {
-            return redirect()->back()->with('error', 'Failed to create license - ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to create license - ' . $e->getMessage()], 500);
+            // return redirect()->back()->with('error', 'Failed to create license - ' . $e->getMessage());
         }
     }
 
@@ -262,7 +263,7 @@ class LicenseController extends Controller
     {
         try {
             $license->update(['hwid' => null]);
-            return redirect()->back()->with('message', 'HWID reset successfully');
+            return redirect()->back()->with('success', 'HWID reset successfully');
         } catch (Exception $e) {
             return redirect()->back()->with('error', 'Failed to reset HWID - ' . $e->getMessage());
         }
@@ -272,7 +273,7 @@ class LicenseController extends Controller
     {
         try {
             $license->update(['paused_at' => Carbon::now()]);
-            return redirect()->back()->with('message', 'License paused successfully');
+            return redirect()->back()->with('success', 'License paused successfully');
         } catch (Exception $e) {
             return redirect()->back()->with('error', 'Failed to pause license - ' . $e->getMessage());
         }
@@ -297,7 +298,7 @@ class LicenseController extends Controller
                 'duration' => $license->duration + $timeDiff,
             ]);
 
-            return redirect()->back()->with('message', 'License unpaused successfully');
+            return redirect()->back()->with('success', 'License unpaused successfully');
         } catch (Exception $e) {
             return redirect()->back()->with('error', 'Failed to unpause license - ' . $e->getMessage());
         }
@@ -313,7 +314,7 @@ class LicenseController extends Controller
             $seconds = $validated['seconds'];
             $license->update(['duration' => $license->duration + $seconds]);
 
-            return redirect()->back()->with('message', 'Time added successfully');
+            return redirect()->back()->with('success', 'Time added successfully');
         } catch (Exception $e) {
             return redirect()->back()->with('error', 'Failed to add time - ' . $e->getMessage());
         }
@@ -326,14 +327,14 @@ class LicenseController extends Controller
             'description' => 'nullable|string|max:255'
         ]);
         $license->update($validated);
-        return redirect()->back()->with('message', 'License updated successfully');
+        return redirect()->back()->with('success', 'License updated successfully');
     }
 
     public function delete(License $license)
     {
         try {
             $license->delete();
-            return redirect()->back()->with('message', 'License deleted successfully');
+            return redirect()->back()->with('success', 'License deleted successfully');
         } catch (Exception $e) {
             return redirect()->back()->with('error', 'Failed to delete license - ' . $e->getMessage());
         }
