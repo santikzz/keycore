@@ -1,2 +1,5 @@
 User-agent: *
-Disallow:
+Disallow: /
+Allow: /$
+
+Sitemap: https://skynetaim.pro/sitemap.xml

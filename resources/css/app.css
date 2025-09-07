@@ -7,19 +7,6 @@
 
 @custom-variant dark (&:is(.dark *));
 
-
-@layer base {
-
-  *,
-  ::after,
-  ::before,
-  ::backdrop,
-  ::file-selector-button {
-    border-color: var(--color-gray-200, currentColor);
-  }
-}
-
-
 :root {
   --background: oklch(0.9911 0 0);
   --foreground: oklch(0.2046 0 0);
@@ -178,6 +165,7 @@
 
 
 @layer base {
+  
   * {
     @apply border-border;
   }
@@ -185,4 +173,5 @@
   body {
     @apply bg-background text-foreground;
   }
+  
 }

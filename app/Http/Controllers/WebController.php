@@ -20,6 +20,11 @@ class WebController extends Controller
     private const RATE_LIMIT_DECAY = 60; // seconds
     private const CACHE_TTL = 300; // 5 minutes
 
+    public function landing()
+    {
+        return Inertia::render('landing/index');
+    }
+
     public function download()
     {
         return Inertia::render('download');

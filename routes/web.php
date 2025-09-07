@@ -7,9 +7,7 @@ use App\Http\Controllers\WebController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-Route::get('/', function () {
-    return Inertia::render('welcome');
-})->name('home');
+Route::get('/', [WebController::class, 'landing'])->name('home');
 
 Route::get('download', [WebController::class, 'download'])->name('download');
 Route::post('download/search', [WebController::class, 'downloadSearch'])->name('download.search');

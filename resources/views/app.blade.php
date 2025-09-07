@@ -5,6 +5,26 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
+
+
+        <meta name="robots" content="index, follow" />
+        <meta name="author" content="SKYNETAIM" />
+        <meta name="description" content="SKYNETAIM - Premium gaming enhancement software with advanced aimbot, wallhack, ESP features. Starting at $5 with joystick support, MAKCU compatibility, kernel drivers, and unique exploits. Zero historical bans, 1PC/2PC compatible." />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://skynetaim.pro/" />
+        <meta property="og:title" content="SKYNETAIM - Premium Gaming Enhancement | Aimbot, Wallhack & ESP from $5" />
+        <meta property="og:description" content="SKYNETAIM offers premium gaming enhancement software with advanced aimbot, wallhack, ESP. Basic edition from $5, Pro from $6, Elite with unique builds. Joystick & MAKCU support, kernel drivers, zero bans." />
+        <meta property="og:image" content="https://skynetaim.pro/assets/skynetaim-banner.jpg" />
+        <meta property="twitter:card" content="summary_large_image" />
+        <meta property="twitter:url" content="https://skynetaim.pro/" />
+        <meta property="twitter:title" content="SKYNETAIM - Premium Gaming Enhancement | Aimbot, Wallhack & ESP from $5" />
+        <meta property="twitter:description" content="SKYNETAIM offers premium gaming enhancement software with advanced aimbot, wallhack, ESP. Basic edition from $5, Pro from $6, Elite with unique builds. Joystick & MAKCU support, kernel drivers, zero bans." />
+        <meta property="twitter:image" content="https://skynetaim.pro/assets/skynetaim-banner.jpg" />
+        <meta name="keywords" content="hack, cheat, aimbot, wallhack, ESP, gaming enhancement, joystick support, MAKCU, kernel drivers, exploits, Chiaki, PSRemote, undetected, premium software, gaming tools" />
+        <link rel="canonical" href="https://skynetaim.pro" />
+
+
+
         {{-- Inline script to detect system dark mode preference and apply it immediately --}}
         <script>
             (function() {
@@ -33,7 +53,8 @@
 
         <title inertia>{{ config('app.name', 'Laravel') }}</title>
 
-        <link rel="icon" href="/favicon.ico" sizes="any">
+        {{-- <link rel="icon" href="/favicon.ico" sizes="any"> --}}
+         <link rel="icon" type="image/png" href="/skynet.png" />
         {{-- <link rel="icon" href="/favicon.svg" type="image/svg+xml">
         <link rel="apple-touch-icon" href="/apple-touch-icon.png"> --}}
 
