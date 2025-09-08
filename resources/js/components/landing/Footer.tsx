@@ -22,6 +22,7 @@ export const Footer = () => {
                 <a href={links.store} className="text-white text-lg lato-regular">Store</a>
                 <a href={links.discord} className="text-white text-lg lato-regular">Discord</a>
                 <a href={links.nimrod} className="text-white text-lg lato-regular">nimrodcore.net</a>
+                <a href='https://www.elitepvpers.com/' className="text-white text-lg lato-regular">elitepvpers</a>
             </div>
 
         </footer>
